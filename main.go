@@ -111,7 +111,7 @@ func initAlpm() error {
 
 	root := "/"
 	if value, _, exists := cmdArgs.getArg("root", "r"); exists {
-		root = value
+		root = value[0]
 	}
 
 	pacmanConf, stderr, err = pacmanconf.PacmanConf("--config", config.PacmanConf, "--root", root)
@@ -120,19 +120,19 @@ func initAlpm() error {
 	}
 
 	if value, _, exists := cmdArgs.getArg("dbpath", "b"); exists {
-		pacmanConf.DBPath = value
+		pacmanConf.DBPath = value[0]
 	}
 
 	if value, _, exists := cmdArgs.getArg("arch"); exists {
-		pacmanConf.Architecture = value
+		pacmanConf.Architecture = value[0]
 	}
 
 	if value, _, exists := cmdArgs.getArg("ignore"); exists {
-		pacmanConf.IgnorePkg = append(pacmanConf.IgnorePkg, strings.Split(value, ",")...)
+		pacmanConf.IgnorePkg = append(pacmanConf.IgnorePkg, strings.Split(value[0], ",")...)
 	}
 
 	if value, _, exists := cmdArgs.getArg("ignoregroup"); exists {
-		pacmanConf.IgnoreGroup = append(pacmanConf.IgnoreGroup, strings.Split(value, ",")...)
+		pacmanConf.IgnoreGroup = append(pacmanConf.IgnoreGroup, strings.Split(value[0], ",")...)
 	}
 
 	//TODO
@@ -140,23 +140,24 @@ func initAlpm() error {
 	//but pacman allows multiple cachedirs to be passed
 	//for now only handle one cache dir
 	if value, _, exists := cmdArgs.getArg("cachedir"); exists {
-		pacmanConf.CacheDir = []string{value}
+		pacmanConf.CacheDir = []string{value[0]}
 	}
 
 	if value, _, exists := cmdArgs.getArg("gpgdir"); exists {
-		pacmanConf.GPGDir = value
+		pacmanConf.GPGDir = value[0]
 	}
 
 	if err := initAlpmHandle(); err != nil {
 		return err
 	}
 
-	switch value, _, _ := cmdArgs.getArg("color"); value {
-	case "always":
+	value, _, exists := cmdArgs.getArg("color");
+        switch true {
+	case len(value) != 0 && value[0] == "always":
 		useColor = true
-	case "auto":
+	case exists && value[0] == "auto":
 		useColor = isTty()
-	case "never":
+	case exists && value[0] == "never":
 		useColor = false
 	default:
 		useColor = pacmanConf.Color && isTty()

@@ -99,6 +99,8 @@ func passToPacman(args *arguments) *exec.Cmd {
 	if args.needRoot() {
 		waitLock()
 	}
+        fmt.Printf("%v", argArr)
+        panic(1)
 	return exec.Command(argArr[0], argArr[1:]...)
 }
 

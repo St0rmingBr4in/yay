@@ -136,9 +136,9 @@ func install(parser *arguments) (err error) {
 		if len(ignore) > 0 {
 			ignoreStr := strings.Join(ignore.ToSlice(), ",")
 			if exists {
-				ignoreStr += "," + value
+				ignoreStr += "," + value[0]
 			}
-			arguments.options["ignore"] = ignoreStr
+			arguments.options["ignore"] = append(parser.options["ignore"], ignoreStr)
 		}
 	}
 

@@ -17,7 +17,7 @@ import (
 // also in a way that can easily be passed to pacman later on.
 type arguments struct {
 	op      string
-	options map[string]string
+	options map[string][]string
 	globals map[string]string
 	doubles stringset.StringSet // Tracks args passed twice such as -yy and -dd
 	targets []string
@@ -26,7 +26,7 @@ type arguments struct {
 func makeArguments() *arguments {
 	return &arguments{
 		"",
-		make(map[string]string),
+		make(map[string][]string),
 		make(map[string]string),
 		make(stringset.StringSet),
 		make([]string, 0),
@@ -150,12 +150,14 @@ func (parser *arguments) addParam(option string, arg string) (err error) {
 	}
 
 	switch {
+        case isReappearing(option):
+		parser.options[option] = append(parser.options[option], arg)
 	case parser.existsArg(option):
-		parser.doubles[option] = struct{}{}
+                parser.doubles[option] = struct{}{}
 	case isGlobal(option):
 		parser.globals[option] = arg
 	default:
-		parser.options[option] = arg
+		parser.options[option] = append(parser.options[option], arg)
 	}
 
 	return
@@ -188,16 +190,16 @@ func (parser *arguments) existsArg(options ...string) bool {
 	return false
 }
 
-func (parser *arguments) getArg(options ...string) (arg string, double bool, exists bool) {
+func (parser *arguments) getArg(options ...string) (args []string, double bool, exists bool) {
 	existCount := 0
 
 	for _, option := range options {
-		var value string
+		var value []string
 
 		value, exists = parser.options[option]
 
 		if exists {
-			arg = value
+			args = value
 			existCount++
 			_, exists = parser.doubles[option]
 
@@ -207,10 +209,12 @@ func (parser *arguments) getArg(options ...string) (arg string, double bool, exi
 
 		}
 
-		value, exists = parser.globals[option]
+                var globalvalue string
+
+		globalvalue, exists = parser.globals[option]
 
 		if exists {
-			arg = value
+			args = append(args, globalvalue)
 			existCount++
 			_, exists = parser.doubles[option]
 
@@ -256,16 +260,18 @@ func (parser *arguments) formatArgs() (args []string) {
 
 	args = append(args, op)
 
-	for option, arg := range parser.options {
+	for option, opargs := range parser.options {
 		if option == "--" {
 			continue
 		}
 
-		formattedOption := formatArg(option)
-		args = append(args, formattedOption)
+                formattedOption := formatArg(option)
 
-		if hasParam(option) {
-			args = append(args, arg)
+                for _, arg := range opargs {
+			args = append(args, formattedOption)
+			if hasParam(option) {
+				args = append(args, arg)
+			}
 		}
 
 		if parser.existsDouble(option) {
@@ -705,6 +711,16 @@ func hasParam(arg string) bool {
 	return true
 }
 
+func isReappearing(arg string) bool {
+	switch arg {
+	case "overwrite":
+	default:
+		return false
+	}
+
+	return true
+}
+
 // Parses short hand options such as:
 // -Syu -b/some/path -
 func (parser *arguments) parseShortOption(arg string, param string) (usedNext bool, err error) {
@@ -841,7 +857,7 @@ func (parser *arguments) parseCommandLine() (err error) {
 
 func (parser *arguments) extractYayOptions() {
 	for option, value := range parser.options {
-		if handleConfig(option, value) {
+		if handleConfig(option, value[0]) {
 			parser.delArg(option)
 		}
 	}
